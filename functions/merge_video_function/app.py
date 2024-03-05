@@ -7,27 +7,30 @@ from urllib.parse import unquote_plus
 from botocore.config import Config
 
 s3_client = boto3.client('s3', os.environ['AWS_REGION'], config=Config(s3={'addressing_style': 'path'}))
-efs_path = os.environ['EFS_PATH']
 
 
-def merge_video(segment_list):
-    media_file = segment_list[0]
+def generate_m3u8file(m3u8_filepath, event):
+    m3u8_file = open(m3u8_filepath, 'w')
+    m3u8_file.write('#EXTM3U\n')
+    m3u8_file.write('#EXT-X-VERSION:3\n')
+    m3u8_file.write('#EXT-X-MEDIA-SEQUENCE:0\n')
+    m3u8_file.write('#EXT-X-ALLOW-CACHE:YES\n')
+    m3u8_file.write('#EXT-X-TARGETDURATION:21\n')
 
-    video_prefix = media_file.split('.')[0]
-    video_filename = video_prefix + '_merged.mp4'
+    segment_count = 0
 
-    with open("segmentlist.txt", "w") as f:
-        for segment in segment_list:
-            f.write('file {} \n'.format(segment))
+    for segment_group in event:
+        for segment in segment_group:
+            segment_count = segment_count + 1
+            t4_filename = segment['transcoded_segment']
+            # TODO：Determine how we get file duration (fixed 20 or ffprobe)
+            m3u8_file.write('#EXTINF:20.0\n')
+            m3u8_file.write(t4_filename + "\n")
 
-    # merge video segments
-    cmd = ['ffmpeg', '-loglevel', 'error', '-f', 'concat', '-safe',
-           '0', '-i', 'segmentlist.txt', '-c', 'copy', video_filename]
+    m3u8_file.write('#EXT-X-ENDLIST\n')
+    m3u8_file.close()
 
-    print("merge video segments ....")
-    subprocess.call(cmd)
-
-    return video_filename
+    return segment_count
 
 
 def lambda_handler(event, context):
@@ -35,31 +38,21 @@ def lambda_handler(event, context):
     if len(event) == 0:
         return {}
 
-    download_dir = event[0][0]['download_dir']
-    os.chdir(download_dir)
-
-    segment_list = []
-
-    for segment_group in event:
-        for segment in segment_group:
-            segment_list.append(segment['transcoded_segment'])
-
-    merged_file = merge_video(segment_list)
-
     # upload merged media to S3
-    job_id = download_dir.split("/")[-1]
+    job_id = event[0][0]['job_id']
     object_name = event[0][0]['object_name']
+    m3u8_filename = object_name.split('.')[0] + '.m3u8'
+    m3u8_filepath = "/tmp/" + m3u8_filename
+
+    segment_count = generate_m3u8file(m3u8_filepath, event)
 
     bucket = os.environ['MEDIA_BUCKET']
-    key = 'output/{}/{}'.format(job_id, object_name)
-    s3_client.upload_file(merged_file, bucket, key, ExtraArgs={'ContentType': 'video/mp4'})
-    # delete the temp download directory
-    shutil.rmtree(download_dir)
+    key = 'output/{}/{}'.format(job_id, m3u8_filename)
+    s3_client.upload_file(m3u8_filepath, bucket, key)
 
     return {
-        'download_dir': download_dir,
-        'input_segments': len(segment_list),
-        'merged_video': merged_file,
+        'input_segments': segment_count,
+        'm3u8_file': m3u8_filename,
         'create_hls': 0,
         'output_bucket': bucket,
         'output_key': key

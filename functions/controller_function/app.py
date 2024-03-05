@@ -8,9 +8,9 @@ from botocore.config import Config
 
 s3_client = boto3.client('s3', os.environ['AWS_REGION'], config=Config(
     s3={'addressing_style': 'path'}))
-efs_path = os.environ['EFS_PATH']
 PARALLEL_GROUPS = int(os.environ['PARALLEL_GROUPS'])
 MAX_CONCURRENCY_MAP = 40
+
 
 def analyze_video(bucket, key, video_file):
     video_file_presigned_url = s3_client.generate_presigned_url(
@@ -27,10 +27,12 @@ def analyze_video(bucket, key, video_file):
     return json.loads(subprocess.check_output(cmd))
 
 
-def generate_control_data(video_details, segment_time, download_dir, object_name):
+def generate_control_data(video_details, job_id, segment_time, s3_bucket, s3_prefix, object_name):
     control_data = {
         "video_details": video_details,
-        "download_dir": download_dir,
+        "job_id": job_id,
+        "s3_bucket": s3_bucket,
+        "s3_prefix": s3_prefix,
         "object_name": object_name,
         "video_groups": []
     }
@@ -70,22 +72,15 @@ def generate_control_data(video_details, segment_time, download_dir, object_name
 
 
 def lambda_handler(event, context):
+    job_id = event['job_id']
     bucket = event['bucket']
     key = event['key']
-    object_prefix = event['object_prefix']
+    bucket_prefix = event['object_prefix']
     object_name = event['object_name']
-    download_dir = os.path.join(efs_path, event['job_id'])
     segment_time = int(event.get('segment_time', os.environ['DEFAULT_SEGMENT_TIME']))
-
-    try:
-        os.mkdir(download_dir)
-    except FileExistsError as error:
-        print('directory exist')
-
-    os.chdir(download_dir)
 
     video_details = analyze_video(bucket, key, object_name)
 
-    control_data = generate_control_data(video_details, segment_time, download_dir, object_name)
+    control_data = generate_control_data(video_details, job_id, segment_time, bucket, bucket_prefix, object_name)
 
     return control_data
