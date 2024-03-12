@@ -56,9 +56,12 @@ Resources:
 
   TriggerFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
     Properties:
       CodeUri: functions/trigger_statemachine_function/
-      Handler: app.lambda_handler
+      Handler: bootstrap
+      Runtime: provided.al2
       Policies:
         - S3ReadPolicy:
             BucketName: !Ref VideosBucketName
@@ -113,9 +116,12 @@ Resources:
 
   ControllerFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
     Properties:
       CodeUri: functions/controller_function/
-      Handler: app.lambda_handler
+      Handler: bootstrap
+      Runtime: provided.al2
       MemorySize: 10240
       Timeout: 900
       Environment:
@@ -134,9 +140,12 @@ Resources:
 
   TranscodeVideoFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
     Properties:
       CodeUri: functions/transcode_video_function/
-      Handler: app.lambda_handler
+      Handler: bootstrap
+      Runtime: provided.al2
       MemorySize: 10240
       Timeout: 900
       Layers:
@@ -150,9 +159,12 @@ Resources:
 
   MergeVideoFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
     Properties:
       CodeUri: functions/merge_video_function/
-      Handler: app.lambda_handler
+      Handler: bootstrap
+      Runtime: provided.al2
       MemorySize: 10240
       Timeout: 900
       Environment:
