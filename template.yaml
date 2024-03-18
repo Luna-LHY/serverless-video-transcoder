@@ -74,7 +74,7 @@ Resources:
         Variables:
           JOB_TABLE: !Ref JobTable
           SFN_ARN: !Ref MainStateMachine
-          DEFAULT_SEGMENT_TIME: 60
+          DEFAULT_SEGMENT_TIME: 2
           ENABLE_HLS: 0
       Layers:
         - !Ref FFmpegLayer

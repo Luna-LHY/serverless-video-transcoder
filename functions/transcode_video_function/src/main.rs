@@ -1,5 +1,5 @@
 use std::process::Command;
-use serde_json::{json, Value};
+use serde_json::Value;
 use aws_sdk_s3::{Client as S3Client};
 use std::path::Path;
 use std::str::FromStr;
@@ -51,7 +51,7 @@ fn transcode_segment(presigned_url: &str, start_ts: i32, duration: i32, segment_
         .arg("-t")
         .arg(duration.to_string())
         .arg("-vf")
-        .arg("scale=-1:720")
+        .arg("scale=-2:720")
         .arg("-x264opts")
         .arg("stitchable")
         .arg("-c:a")
@@ -67,8 +67,6 @@ fn transcode_segment(presigned_url: &str, start_ts: i32, duration: i32, segment_
 async fn mp4_to_t4(mp4_filepath: &str, segment_order: i32, bucket_name: &str, job_id: &str) -> String {
     let ts_filename = format!("tmp_{}.ts", segment_order);
     let ts_filepath = format!("/tmp/{}", ts_filename);
-
-    println!("Transcoding mp4 file to ts.");
 
     let cmd = Command::new("ffmpeg")
         .arg("-y")
@@ -128,7 +126,6 @@ async fn handler(event: LambdaEvent<Value>) -> Result<TranscodeOutput, Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_runtime::Error> {
-    print!("Hello, World!");
     lambda_runtime::run(service_fn(handler)).await
 }
 

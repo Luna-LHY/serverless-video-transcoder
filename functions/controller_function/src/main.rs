@@ -25,13 +25,10 @@ async fn handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
 
     let control_data = generate_control_data(&video_details, &job_id, segment_time as f64, &bucket, &bucket_prefix, &object_name);
 
-    println!("control data is: {:?}", control_data);
-
     Ok(control_data)
 }
 
 async fn analyze_video(bucket: &str, key: &str) -> Value {
-    println!("Analyze video!!");
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let s3_client = S3Client::new(&config);
     let expires_in = Duration::from_secs(600);
@@ -89,8 +86,6 @@ fn generate_control_data(
         "video_groups": []
     });
 
-    println!("generate_control_data!!!!!");
-
     let mut video_stream = None;
     let t = video_details.get("streams");
     for stream in video_details.get("streams").unwrap().as_array().unwrap() {
@@ -102,9 +97,6 @@ fn generate_control_data(
             break;
         }
     }
-
-    println!("final video_stream is {}", video_stream.unwrap());
-
 
     if video_stream != None {
         let t = f64::from_str(video_stream.unwrap().get("duration").unwrap().as_str().unwrap()).unwrap();

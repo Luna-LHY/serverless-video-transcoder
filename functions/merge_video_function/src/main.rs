@@ -51,9 +51,6 @@ async fn handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
     let object_name = segment.object_name;
     let m3u8_filename = format!("{}.m3u8", object_name.split('.').next().unwrap());
     let m3u8_filepath = format!("/tmp/{}", m3u8_filename);
-    println!("job_id: {}", job_id);
-    println!("object_name: {}", object_name);
-    println!("m3u8_filename: {}", m3u8_filename);
 
     let segment_count = generate_m3u8file(&m3u8_filepath, event);
 
@@ -83,6 +80,5 @@ async fn handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    print!("Hello, World!");
     lambda_runtime::run(service_fn(handler)).await
 }
